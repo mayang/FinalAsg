@@ -43,12 +43,15 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    public static int currFrame = 0; // current frame
    public static byte[] bytes; // bytes from file
    public static int[] byteIndicies; // keeps indexes where new frames start;
+   public static int state; // 0 = play, 1 = pause, 2 = stop?
    
    Timer fps;
    
    public VideoSearch(int width, int height, String fileName)
    {
 	
+	    state = 2;
+	   
 	    img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 	    //Reading File
 	    try {
@@ -71,19 +74,19 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	    	// len = 304128 for single picture
 	        vidFlag = false;
 	        // this is a video!
-	        if (len > 304128) {
-	        	vidFlag = true;
+	        //if (len > 304128) {
+	        	//vidFlag = true;
 	        	fps = new Timer(42, new refreshFrame());
 	        	fps.setInitialDelay(42);
-	        }
+	        //}
 	        
 	        // get indicies in bytes array where each frame starts
-	        if (vidFlag) {
+	        //if (vidFlag) {
 	        	byteIndicies = new int[720];
 	        	for (int b = 0; b < 720; ++b) {
 	        		byteIndicies[b] = b * 304128;
 	        	}
-	        }
+	       //ze }
 	        
 	        int ind = 0;
 	        // get first frame
@@ -129,11 +132,33 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 
 	    // Buttons
 		JPanel buttonPanel = new JPanel();
+		buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
 		buttonPanel.setPreferredSize(new Dimension(200, height));
 	    frame.getContentPane().add(buttonPanel, BorderLayout.EAST);
-				
+		
+	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25)));
+	    
+	    MyButton playButton = new MyButton("Play");
+	    playButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+	    buttonPanel.add(playButton);
+	    
+	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25)));
+	    
+	    MyButton pauseButton = new MyButton("Pause");
+	    pauseButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+	    buttonPanel.add(pauseButton);
+	    
+	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25)));
+	    
+	    MyButton stopButton = new MyButton("Stop");
+	    stopButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+	    buttonPanel.add(stopButton);
+	    
+	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25)));
+	    
 		MyButton closeButton = new MyButton("Close");
-		buttonPanel.add(closeButton, BorderLayout.WEST);	
+		closeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+		buttonPanel.add(closeButton);	
 		
 	    frame.pack();
 	    frame.setVisible(true); 
@@ -157,15 +182,17 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    
    
    // Function calls
-
-   
-
-   
-   // Move tiles
    
 	public void buttonPressed(String name)
 	{
-		if (name.equals("Close"))
+		if (name.equals("Play")) {
+			state = 0;
+			fps.start();
+		} else if (name.equals("Pause")) {
+			state = 1;
+		} else if (name.equals("Stop")) {
+			state = 2;
+		} else if (name.equals("Close"))
 		{
 			System.exit(0);
 		}
@@ -282,13 +309,28 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	
 	class refreshFrame implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
-			++currFrame;
-			if (currFrame == 720) {
+			if (state == 0) { // play
+				++currFrame;
+				if (currFrame == 720) {
+					currFrame = 0;
+				}
+				BufferedImage f = refreshFrame(currFrame);
+				//if (view == 0) {
+				videoOriginal(f);
+			} else if (state == 1) { // pause
+				BufferedImage f = refreshFrame(currFrame);
+				//if (view == 0) {
+				videoOriginal(f);
+				fps.stop();
+			} else if (state == 2) {
 				currFrame = 0;
+				BufferedImage f = refreshFrame(currFrame);
+				//if (view == 0) {
+				videoOriginal(f);
+				fps.stop();
 			}
-			BufferedImage f = refreshFrame(currFrame);
-			//if (view == 0) {
-			videoOriginal(f);
+
+
 		  // System.out.println("Frame:" + currFrame);
 		}
 	}
