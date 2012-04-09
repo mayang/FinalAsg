@@ -160,9 +160,41 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		closeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 		buttonPanel.add(closeButton);	
 		
+				
+		// This videos image strip
+		JPanel videoStripPanel = new JPanel();
+		videoStripPanel.setLayout(new BoxLayout(videoStripPanel, BoxLayout.X_AXIS));
+		videoStripPanel.setPreferredSize(new Dimension(width, 100));
+		//MyButton prevButton = new MyButton
+		
+		showVideoStrip(videoStripPanel, currFrame, width, height);
+		frame.getContentPane().add(videoStripPanel, BorderLayout.SOUTH);
+		videoStripPanel.addMouseListener(this);
+		videoStripPanel.addMouseMotionListener(this);
+		
+		
 	    frame.pack();
 	    frame.setVisible(true); 
 	    
+   }
+   
+   
+   // Function calls
+   // scale image
+   public BufferedImage scaleImage(BufferedImage img, int oWidth, int oHeight, double scale ) {
+	   double newW = oWidth * scale;
+	   double newH = oHeight * scale;
+	   BufferedImage scaledImg = new BufferedImage((int) newW, (int) newH, BufferedImage.TYPE_INT_RGB);
+	   Graphics2D gImg = scaledImg.createGraphics();
+	   
+	   gImg.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+	   gImg.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+	   gImg.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+   
+	   gImg.drawImage(img, 0, 0, (int) newW, (int) newH, null);
+	   gImg.dispose();
+	   
+	   return scaledImg;
    }
    
    // show original image
@@ -180,9 +212,20 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 
    }
    
+   // show images in strip
+	public void showVideoStrip(JPanel strip, int startFrame, int width, int height) {
+		
+		// get image
+		for (int i = startFrame; i < startFrame + 8; ++i) {
+			BufferedImage vid_frame = refreshFrame(i);
+			vid_frame = scaleImage(vid_frame, width, height, .2);
+			JLabel label = new JLabel(new ImageIcon(vid_frame));
+			strip.add(label);
+		}
+		
+	}
    
-   // Function calls
-   
+   // buttons
 	public void buttonPressed(String name)
 	{
 		if (name.equals("Play")) {
@@ -198,6 +241,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		}
 	}
 	
+	// get next frame
 	public BufferedImage refreshFrame(int currFrame) {
 		// get new picture
     	int ind = byteIndicies[currFrame];
@@ -233,11 +277,17 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	   panel.repaint();
 	}
 
+	
 	/////////////////////////////////////////////////////////
 	@Override
 	public void mouseClicked(MouseEvent arg0) {
 		// TODO Auto-generated method stub
-		//System.out.println(arg0.getX() + " and " + arg0.getY());
+		System.out.println(arg0.getX() + " and " + arg0.getY());
+		System.out.println(arg0.getX() / 70);
+		currFrame = arg0.getX() / 70;
+		BufferedImage f = refreshFrame(currFrame);
+		//if (view == 0) {
+		videoOriginal(f);
 		//moveTiles(arg0.getX(), arg0.getY());
 	}
 
@@ -322,7 +372,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 				//if (view == 0) {
 				videoOriginal(f);
 				fps.stop();
-			} else if (state == 2) {
+			} else if (state == 2) { // stop
 				currFrame = 0;
 				BufferedImage f = refreshFrame(currFrame);
 				//if (view == 0) {
