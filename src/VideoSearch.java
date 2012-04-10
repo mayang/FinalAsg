@@ -261,15 +261,15 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		} else if (name.equals("Close")) { // close
 			System.exit(0);
 		} else if (name.equals("Prev")) { // Prev
-			if (startFrame > 0) { 
-				--startFrame;
-				showVideoStrip(currStrip, o_width, o_height);
-			}
-		} else if (name.equals("Next")) { // next
-			if (startFrame < 719) {
+			if (startFrame < 719) { 
 				++startFrame;
-				showVideoStrip(currStrip, o_width, o_height);
 			}
+			showVideoStrip(currStrip, o_width, o_height);
+		} else if (name.equals("Next")) { // next
+			if (startFrame > 0) {
+				--startFrame;
+			}
+			showVideoStrip(currStrip, o_width, o_height);
 		}
 	}
 	
