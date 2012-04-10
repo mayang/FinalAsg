@@ -44,6 +44,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    public static byte[] bytes; // bytes from file
    public static int[] byteIndicies; // keeps indexes where new frames start;
    public static int state; // 0 = play, 1 = pause, 2 = stop?
+   public static int startFrame; // starting frame of this video's search strip
    
    Timer fps;
    
@@ -165,12 +166,27 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		JPanel videoStripPanel = new JPanel();
 		videoStripPanel.setLayout(new BoxLayout(videoStripPanel, BoxLayout.X_AXIS));
 		videoStripPanel.setPreferredSize(new Dimension(width, 100));
-		//MyButton prevButton = new MyButton
 		
-		showVideoStrip(videoStripPanel, currFrame, width, height);
+		MyButton prevButton = new MyButton("Prev", new ImageIcon("images/left.gif"));
+		prevButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+		videoStripPanel.add(prevButton);
+		
+		JPanel strip = new JPanel();
+		strip.setLayout(new BoxLayout(strip, BoxLayout.X_AXIS));
+		videoStripPanel.setPreferredSize(new Dimension(width-20, 100));
+		startFrame = currFrame;
+		showVideoStrip(strip, width, height);
+		strip.addMouseListener(this);
+		strip.addMouseMotionListener(this);
+		strip.setAlignmentX(Component.CENTER_ALIGNMENT);
+		videoStripPanel.add(strip);
+		
+		MyButton nextButton = new MyButton("Next", new ImageIcon("images/right.gif"));
+		nextButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
+		videoStripPanel.add(nextButton);
+		
 		frame.getContentPane().add(videoStripPanel, BorderLayout.SOUTH);
-		videoStripPanel.addMouseListener(this);
-		videoStripPanel.addMouseMotionListener(this);
+
 		
 		
 	    frame.pack();
@@ -213,10 +229,10 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    }
    
    // show images in strip
-	public void showVideoStrip(JPanel strip, int startFrame, int width, int height) {
+	public void showVideoStrip(JPanel strip, int width, int height) {
 		
 		// get image
-		for (int i = startFrame; i < startFrame + 8; ++i) {
+		for (int i = startFrame; i < startFrame + 6; ++i) {
 			BufferedImage vid_frame = refreshFrame(i);
 			vid_frame = scaleImage(vid_frame, width, height, .2);
 			JLabel label = new JLabel(new ImageIcon(vid_frame));
@@ -284,7 +300,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		// TODO Auto-generated method stub
 		System.out.println(arg0.getX() + " and " + arg0.getY());
 		System.out.println(arg0.getX() / 70);
-		currFrame = arg0.getX() / 70;
+		currFrame = (arg0.getX() / 70) + startFrame;
 		BufferedImage f = refreshFrame(currFrame);
 		//if (view == 0) {
 		videoOriginal(f);
@@ -345,12 +361,12 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 			Image img = icon.getImage();
 			Image scaleimg = img.getScaledInstance(20, 20, Image.SCALE_SMOOTH);
 			setIcon(new ImageIcon(scaleimg));
-			setText(label);
-			setFont(new Font("Helvetica", Font.PLAIN, 0));
+			setName(label);
+			//setFont(new Font("Helvetica", Font.PLAIN, 0));
 			addMouseListener(
 				new MouseAdapter() {
 	  				public void mousePressed(MouseEvent e) {
-						buttonPressed(getText());
+						buttonPressed(getName());
 					}
 				}
 			);
