@@ -233,16 +233,24 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    
    // show images in strip
 	public void showVideoStrip(JPanel strip, int width, int height) {
+		int loopcount = 0;
 		
 		// get image
 		strip.removeAll();
 		strip.setLayout(new BoxLayout(strip, BoxLayout.X_AXIS));
 		strip.setPreferredSize(new Dimension(width-20, 100));
-		for (int i = startFrame; i < startFrame + 6; ++i) {
+		int end = startFrame + 6;
+		for (int i = startFrame; i < end; ++i) {
+			if (i > 719) { // cycle!
+				i = 0;
+				//startFrame = 0;
+				end = 6 - loopcount; // what should this be?
+			}
 			BufferedImage vid_frame = refreshFrame(i);
 			vid_frame = scaleImage(vid_frame, width, height, .2);
 			JLabel label = new JLabel(new ImageIcon(vid_frame));
 			strip.add(label);
+			++loopcount;
 		}
 		strip.revalidate();
 		strip.repaint();
@@ -263,11 +271,15 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		} else if (name.equals("Prev")) { // Prev
 			if (startFrame < 719) { 
 				++startFrame;
+			} else {
+				startFrame = 0;
 			}
 			showVideoStrip(currStrip, o_width, o_height);
 		} else if (name.equals("Next")) { // next
 			if (startFrame > 0) {
 				--startFrame;
+			} else {
+				startFrame = 719; // how to cycle?
 			}
 			showVideoStrip(currStrip, o_width, o_height);
 		}
@@ -317,6 +329,10 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		System.out.println(arg0.getX() + " and " + arg0.getY());
 		System.out.println(arg0.getX() / 70);
 		currFrame = (arg0.getX() / 70) + startFrame;
+		if (currFrame > 719) {
+			// TODO Handle Cycle
+			currFrame -= 720;
+		}
 		BufferedImage f = refreshFrame(currFrame);
 		//if (view == 0) {
 		videoOriginal(f);
