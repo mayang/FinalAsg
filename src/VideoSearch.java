@@ -45,6 +45,9 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    public static int[] byteIndicies; // keeps indexes where new frames start;
    public static int state; // 0 = play, 1 = pause, 2 = stop?
    public static int startFrame; // starting frame of this video's search strip
+   public static JPanel currStrip;  // the video strip of the playing video
+   public static int o_width; // original width
+   public static int o_height; // original height
    
    Timer fps;
    
@@ -52,7 +55,9 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    {
 	
 	    state = 2;
-	   
+	    o_width = width;
+	    o_height = height;
+	    
 	    img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 	    //Reading File
 	    try {
@@ -171,15 +176,13 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		prevButton.setAlignmentX(Component.LEFT_ALIGNMENT);
 		videoStripPanel.add(prevButton);
 		
-		JPanel strip = new JPanel();
-		strip.setLayout(new BoxLayout(strip, BoxLayout.X_AXIS));
-		videoStripPanel.setPreferredSize(new Dimension(width-20, 100));
+		currStrip = new JPanel();
 		startFrame = currFrame;
-		showVideoStrip(strip, width, height);
-		strip.addMouseListener(this);
-		strip.addMouseMotionListener(this);
-		strip.setAlignmentX(Component.CENTER_ALIGNMENT);
-		videoStripPanel.add(strip);
+		showVideoStrip(currStrip, width, height);
+		currStrip.addMouseListener(this);
+		currStrip.addMouseMotionListener(this);
+		currStrip.setAlignmentX(Component.CENTER_ALIGNMENT);
+		videoStripPanel.add(currStrip);
 		
 		MyButton nextButton = new MyButton("Next", new ImageIcon("images/right.gif"));
 		nextButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
@@ -232,28 +235,41 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	public void showVideoStrip(JPanel strip, int width, int height) {
 		
 		// get image
+		strip.removeAll();
+		strip.setLayout(new BoxLayout(strip, BoxLayout.X_AXIS));
+		strip.setPreferredSize(new Dimension(width-20, 100));
 		for (int i = startFrame; i < startFrame + 6; ++i) {
 			BufferedImage vid_frame = refreshFrame(i);
 			vid_frame = scaleImage(vid_frame, width, height, .2);
 			JLabel label = new JLabel(new ImageIcon(vid_frame));
 			strip.add(label);
 		}
-		
+		strip.revalidate();
+		strip.repaint();
 	}
    
    // buttons
 	public void buttonPressed(String name)
 	{
-		if (name.equals("Play")) {
+		if (name.equals("Play")) { // Play
 			state = 0;
 			fps.start();
-		} else if (name.equals("Pause")) {
+		} else if (name.equals("Pause")) { // Pause
 			state = 1;
-		} else if (name.equals("Stop")) {
+		} else if (name.equals("Stop")) { // Stop
 			state = 2;
-		} else if (name.equals("Close"))
-		{
+		} else if (name.equals("Close")) { // close
 			System.exit(0);
+		} else if (name.equals("Prev")) { // Prev
+			if (startFrame > 0) { 
+				--startFrame;
+				showVideoStrip(currStrip, o_width, o_height);
+			}
+		} else if (name.equals("Next")) { // next
+			if (startFrame < 719) {
+				++startFrame;
+				showVideoStrip(currStrip, o_width, o_height);
+			}
 		}
 	}
 	
