@@ -37,7 +37,11 @@ public class VideoPreProcessor {
 	
 	// process the video!
 	public void processVideo(File video, File audio) {
-		System.out.println("\t" + video.getName());
+		if (!(video.getName().endsWith(".rgb") || audio.getName().endsWith(".wav"))) {
+			System.out.println("these files aren't valid!");
+			System.exit(1);
+		}
+		
 	}
 	
 }
