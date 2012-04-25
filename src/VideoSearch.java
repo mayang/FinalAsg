@@ -29,6 +29,10 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    		int height = 288;
    		//String fileName = "../image1.rgb";
    		
+   		VideoPreProcessor vpp = new VideoPreProcessor("vdos");
+   		vpp.fileTraverse();
+   		
+   		
    		VideoSearch ir = new VideoSearch(width, height, fileName);
    		// for video!
 	    if (vidFlag) {
@@ -48,6 +52,10 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    public static JPanel currStrip;  // the video strip of the playing video
    public static int o_width; // original width
    public static int o_height; // original height
+   
+   public static byte[] redValues; // Red value of each frame
+   public static byte[] blueValues; // blue values of each frame
+   public static byte[] greenValues; // green values of each frame
    
    Timer fps;
    
@@ -93,7 +101,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	        		byteIndicies[b] = b * 304128;
 	        	}
 	       //ze }
-	        
+	        		        
 	        int ind = 0;
 	        // get first frame
         	for(int y = 0; y < height; y++){
@@ -109,6 +117,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 					ind++;
 				}
 			}
+        	
 			
 			
 	    } catch (FileNotFoundException e) {
@@ -269,17 +278,17 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		} else if (name.equals("Close")) { // close
 			System.exit(0);
 		} else if (name.equals("Prev")) { // Prev
-			if (startFrame < 719) { 
-				++startFrame;
-			} else {
-				startFrame = 0;
-			}
-			showVideoStrip(currStrip, o_width, o_height);
-		} else if (name.equals("Next")) { // next
 			if (startFrame > 0) {
 				--startFrame;
 			} else {
 				startFrame = 719; // how to cycle?
+			}
+			showVideoStrip(currStrip, o_width, o_height);
+		} else if (name.equals("Next")) { // next
+			if (startFrame < 719) { 
+				++startFrame;
+			} else {
+				startFrame = 0;
 			}
 			showVideoStrip(currStrip, o_width, o_height);
 		}
