@@ -114,7 +114,7 @@ public class VideoPreProcessor {
 		ew.add(end);
 		
 		// <video>
-		StartElement vidElem = ef.createStartElement("", "", "Video");
+		StartElement vidElem = ef.createStartElement("", "", "video");
 		ew.add(vidElem);
 		ew.add(end);
 
@@ -124,18 +124,18 @@ public class VideoPreProcessor {
 			Attribute frameNo = ef.createAttribute("no", Integer.toString(i));
 			List<Attribute> attrList = Arrays.asList(frameNo);
 			List<Object> nsList = Arrays.asList();
-			StartElement frameElem = ef.createStartElement("", "", "Frame",  attrList.iterator(), nsList.iterator());
+			StartElement frameElem = ef.createStartElement("", "", "frame",  attrList.iterator(), nsList.iterator());
 			ew.add(frameElem);
 			ew.add(end);
 			// TODO: video descriptors
 			extractVidDesc(ew, i);
 			ew.add(tab);
-			ew.add(ef.createEndElement("", "", "Frame"));
+			ew.add(ef.createEndElement("", "", "frame"));
 			ew.add(end);
 		}
 		
 		// </video>
-		ew.add(ef.createEndElement("", "", "Video"));
+		ew.add(ef.createEndElement("", "", "video"));
 		ew.add(end);
 		
 		// end document
@@ -169,10 +169,10 @@ public class VideoPreProcessor {
 		String color = extractColor(img);
 		ew.add(tab);
 		ew.add(tab);
-		ew.add(ef.createStartElement("", "", "Color"));
+		ew.add(ef.createStartElement("", "", "color"));
 		Characters content = ef.createCharacters(color);
 		ew.add(content);
-		ew.add(ef.createEndElement("", "", "Color"));
+		ew.add(ef.createEndElement("", "", "color"));
 		ew.add(end);
 	
 	}
@@ -182,7 +182,7 @@ public class VideoPreProcessor {
 	// use hues since that seems to be simple since it's one number, have to check saturation though
 	// for black or white or whatever it is that tells if its black or white
 	
-	private String extractColor(BufferedImage frame) {
+	public String extractColor(BufferedImage frame) {
 		String color = "";
 		int redCount = 0, greenCount = 0, blueCount = 0;
 		Map<String, Integer> colorHistogram = new HashMap<String, Integer>(); 

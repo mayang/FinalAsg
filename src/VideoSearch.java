@@ -11,11 +11,16 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.*;
 import java.io.*;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Random;
 
+import javax.xml.stream.*;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
+
+import javax.management.modelmbean.XMLParseException;
 import javax.swing.*;
+
+import org.xml.sax.InputSource;
 
 
 public class VideoSearch implements MouseListener, MouseMotionListener 
@@ -34,8 +39,8 @@ public class VideoSearch implements MouseListener, MouseMotionListener
     		byteIndicies[b] = b * 304128;
     	}
     	
-   		VideoPreProcessor vpp = new VideoPreProcessor("vdos", byteIndicies);
-   		vpp.fileTraverse();
+//   		VideoPreProcessor vpp = new VideoPreProcessor("vdos", byteIndicies);
+//   		vpp.fileTraverse();
    		
    		
    		VideoSearch ir = new VideoSearch(width, height, fileName);
@@ -57,6 +62,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    public static JPanel currStrip;  // the video strip of the playing video
    public static int o_width; // original width
    public static int o_height; // original height
+   public static String currVid; // name of current video that is playaing
       
    Timer fps;
    
@@ -71,6 +77,15 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	    //Reading File
 	    try {
 		    File file = new File(fileName);
+		    // is this a full path name?
+		    int slash = fileName.lastIndexOf("\\");
+		    int dot = fileName.indexOf(".");
+		    if (slash == -1) { // this was just a file name 
+		    	currVid = fileName.substring(0, dot);
+		    } else {
+		    	currVid = fileName.substring(slash + 1, dot);
+		    }
+		   // System.out.println(currVid);
 		    InputStream is = new FileInputStream(file);
 	
 		    long len = file.length();
@@ -172,6 +187,12 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	    
 	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25)));
 	    
+	    MyButton searchButton = new MyButton("Search");
+	    searchButton.setAlignmentX(Component.CENTER_ALIGNMENT);
+	    buttonPanel.add(searchButton);
+	    
+	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25)));
+	    
 		MyButton closeButton = new MyButton("Close");
 		closeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 		buttonPanel.add(closeButton);	
@@ -209,6 +230,10 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    
    
    // Function calls
+   /////////////////////////////////////////////////////
+   /// VIDEO STUFF
+   ///////////////////////////////////////////////////////
+   
    // scale image
    public BufferedImage scaleImage(BufferedImage img, int oWidth, int oHeight, double scale ) {
 	   double newW = oWidth * scale;
@@ -266,34 +291,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		strip.repaint();
 	}
    
-   // buttons
-	public void buttonPressed(String name)
-	{
-		if (name.equals("Play")) { // Play
-			state = 0;
-			fps.start();
-		} else if (name.equals("Pause")) { // Pause
-			state = 1;
-		} else if (name.equals("Stop")) { // Stop
-			state = 2;
-		} else if (name.equals("Close")) { // close
-			System.exit(0);
-		} else if (name.equals("Prev")) { // Prev
-			if (startFrame > 0) {
-				--startFrame;
-			} else {
-				startFrame = 719; // how to cycle?
-			}
-			showVideoStrip(currStrip, o_width, o_height);
-		} else if (name.equals("Next")) { // next
-			if (startFrame < 719) { 
-				++startFrame;
-			} else {
-				startFrame = 0;
-			}
-			showVideoStrip(currStrip, o_width, o_height);
-		}
-	}
+ 
 	
 	// get next frame
 	public BufferedImage refreshFrame(int currFrame) {
@@ -331,8 +329,77 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	   panel.repaint();
 	}
 
+	//////////////////////////////////////////////////////////
+	/// SEARCH STUFF 
+	////////////////////////////////////////////////////////////
+	public void extractSearchParams() throws XPathExpressionException, FileNotFoundException {
+//		Read current frame's xml file
+		XPathFactory xpf = XPathFactory.newInstance(); 
+		XPath xpath = xpf.newXPath();
+		InputSource is = new InputSource(new FileInputStream(currVid + ".xml"));
+		String fno = Integer.toString(currFrame);
+		String query = "/video/frame[@no=" + fno + "]/color";
+		String color = xpath.evaluate(query , is);
+		System.out.println(color);
+		
+	}
+	
+	
 	
 	/////////////////////////////////////////////////////////
+	/// CONTROLLER STUFF
+	/////////////////////////////////////////////////////////////
+	  // buttons
+	public void buttonPressed(String name)
+	{
+		if (name.equals("Play")) { // Play
+			state = 0;
+			fps.start();
+		} else if (name.equals("Pause")) { // Pause
+			state = 1;
+			//BufferedImage f 
+			img = refreshFrame(currFrame);
+			//if (view == 0) {
+			videoOriginal(img);
+			fps.stop();
+		} else if (name.equals("Stop")) { // Stop
+			state = 2;
+			currFrame = 0;
+			//BufferedImage f
+			img = refreshFrame(currFrame);
+			//if (view == 0) {
+			videoOriginal(img);
+			fps.stop();
+		} else if (name.equals("Search")) {
+			// search only if not playing
+			if (state != 0) {
+				try {
+					extractSearchParams();
+				} catch (XPathExpressionException | FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		} else if (name.equals("Close")) { // close
+			System.exit(0);
+		} else if (name.equals("Prev")) { // Prev
+			if (startFrame > 0) {
+				--startFrame;
+			} else {
+				startFrame = 719; // how to cycle?
+			}
+			showVideoStrip(currStrip, o_width, o_height);
+		} else if (name.equals("Next")) { // next
+			if (startFrame < 719) { 
+				++startFrame;
+			} else {
+				startFrame = 0;
+			}
+			showVideoStrip(currStrip, o_width, o_height);
+		}
+	}
+	
+	
 	@Override
 	public void mouseClicked(MouseEvent arg0) {
 		// TODO Auto-generated method stub
@@ -422,20 +489,23 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 				if (currFrame == 720) {
 					currFrame = 0;
 				}
-				BufferedImage f = refreshFrame(currFrame);
+				//BufferedImage f 
+				img = refreshFrame(currFrame);
 				//if (view == 0) {
-				videoOriginal(f);
+				videoOriginal(img);
 			} else if (state == 1) { // pause
-				BufferedImage f = refreshFrame(currFrame);
-				//if (view == 0) {
-				videoOriginal(f);
-				fps.stop();
+//				//BufferedImage f 
+//				img = refreshFrame(currFrame);
+//				//if (view == 0) {
+//				videoOriginal(img);
+				//fps.stop();
 			} else if (state == 2) { // stop
-				currFrame = 0;
-				BufferedImage f = refreshFrame(currFrame);
-				//if (view == 0) {
-				videoOriginal(f);
-				fps.stop();
+//				currFrame = 0;
+//				//BufferedImage f
+//				img = refreshFrame(currFrame);
+//				//if (view == 0) {
+//				videoOriginal(img);
+//				fps.stop();
 			}
 
 
