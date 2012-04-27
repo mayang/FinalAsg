@@ -29,7 +29,12 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    		int height = 288;
    		//String fileName = "../image1.rgb";
    		
-   		VideoPreProcessor vpp = new VideoPreProcessor("vdos");
+    	byteIndicies = new int[720];
+    	for (int b = 0; b < 720; ++b) {
+    		byteIndicies[b] = b * 304128;
+    	}
+    	
+   		VideoPreProcessor vpp = new VideoPreProcessor("vdos", byteIndicies);
    		vpp.fileTraverse();
    		
    		
@@ -52,11 +57,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    public static JPanel currStrip;  // the video strip of the playing video
    public static int o_width; // original width
    public static int o_height; // original height
-   
-   public static byte[] redValues; // Red value of each frame
-   public static byte[] blueValues; // blue values of each frame
-   public static byte[] greenValues; // green values of each frame
-   
+      
    Timer fps;
    
    public VideoSearch(int width, int height, String fileName)
@@ -96,10 +97,10 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	        
 	        // get indicies in bytes array where each frame starts
 	        //if (vidFlag) {
-	        	byteIndicies = new int[720];
-	        	for (int b = 0; b < 720; ++b) {
-	        		byteIndicies[b] = b * 304128;
-	        	}
+//	        	byteIndicies = new int[720];
+//	        	for (int b = 0; b < 720; ++b) {
+//	        		byteIndicies[b] = b * 304128;
+//	        	}
 	       //ze }
 	        		        
 	        int ind = 0;
