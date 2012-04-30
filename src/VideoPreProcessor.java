@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.lang.Math;
 
 import javax.xml.stream.*;
 import javax.xml.stream.events.Characters;
@@ -18,12 +19,24 @@ import javax.xml.stream.events.StartElement;
 import javax.xml.stream.events.XMLEvent;
 import javax.xml.stream.events.Attribute;
 
+import javax.swing.*;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.UnsupportedAudioFileException;
+import javax.sound.sampled.DataLine.Info;
 
 public class VideoPreProcessor {
 
 	File root; // root of where the videos are
 	public static int[] byteIndicies; // keeps indexes where new frames start;
 	public static byte[] bytes; // bytes from file
+	public static byte[] soundBytes; // bytes from file
+	public final int SOUND_INDEX = 7357;
+	private final int EXTERNAL_BUFFER_SIZE = 524288; // 128Kb
+	public static AudioInputStream audioInputStream;
 	public static List<String> fileNames; // names of files
 	public static Map<String, byte[]> fileBytes; // bytes of the files
 	
@@ -59,6 +72,7 @@ public class VideoPreProcessor {
 			if (contents.length == 2 && contents[0].isFile() && contents[1].isFile()) {
 				// TODO This is a "video!" preprocess this
 				fileNames.add(curr.getName());
+				System.out.println(contents[1]);
 				processVideo(contents[0], contents[1]);
 			} else {
 				// recurse through other folders
@@ -98,7 +112,54 @@ public class VideoPreProcessor {
 //        fileBytes.put(key, bytes);
 	}
 	
-	
+	//reads in sound file
+		private void readinSoundFile(File sound) throws IOException {
+			
+			InputStream sis = null;
+			try {
+				sis = new FileInputStream(sound);
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			
+			System.out.println(sis == null);
+			
+			long slen = sound.length();
+	    
+			soundBytes = new byte[(int) slen];
+	    
+//	   		 System.out.println("file length:"+ len);
+			//audioInputStream = null;
+			try {
+		    audioInputStream = AudioSystem.getAudioInputStream(sis);
+			} catch (UnsupportedAudioFileException e1) {
+				System.out.println("fail1");
+		    new PlayWaveException(e1);
+			} catch (IOException e1) {
+				System.out.println("fail2");
+		    new PlayWaveException(e1);
+			}
+			/*System.out.println(audioInputStream == null);
+					AudioFormat audioFormat = audioInputStream.getFormat();
+					Info info = new Info(SourceDataLine.class, audioFormat);
+					System.out.println("hi");
+					int available = 0;
+					System.out.println(available);
+					System.out.println("bye");
+					// opens the audio channel
+					
+					SourceDataLine dataLine = null;
+					dataLine = null;
+					try {
+					    dataLine = (SourceDataLine) AudioSystem.getLine(info);
+					    dataLine.open(audioFormat, EXTERNAL_BUFFER_SIZE);
+					} catch (LineUnavailableException e1) {
+					    new PlayWaveException(e1);
+					}
+					
+		dataLine.start();*/
+		}
 	// process the video!
 	private void processVideo(File video, File audio) throws XMLStreamException, FileNotFoundException {
 		if (!(video.getName().endsWith(".rgb") || audio.getName().endsWith(".wav"))) {
@@ -108,6 +169,7 @@ public class VideoPreProcessor {
 		// read in the video file
 		try {
 			readinFile(video);
+			readinSoundFile(audio);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -179,18 +241,87 @@ public class VideoPreProcessor {
 				ind++;
 			}
     	}
-		XMLEventFactory ef = XMLEventFactory.newInstance();
-		XMLEvent end = ef.createDTD("\n");
-		XMLEvent tab = ef.createDTD("\t");
-		// Get dominant color of image
-		String color = extractColor(img);
-		ew.add(tab);
-		ew.add(tab);
-		ew.add(ef.createStartElement("", "", "color"));
-		Characters content = ef.createCharacters(color);
-		ew.add(content);
-		ew.add(ef.createEndElement("", "", "color"));
-		ew.add(end);
+		//Future Frame for Motion Search
+				int ind2 = 0;
+				if (frameNo < 715){
+					ind2 = byteIndicies[frameNo+5]; //look 10 frames into the future
+				}
+				else if (frameNo > 715){
+					ind2 = byteIndicies[720-frameNo]; //look 10 frames into the future
+				}
+				
+				BufferedImage nextImg = new BufferedImage(352, 288, BufferedImage.TYPE_INT_RGB);
+				for(int y = 0; y < 288; y++){
+					for(int x = 0; x < 352; x++){
+						//System.out.println("i:" + ind);
+						byte a = 0;
+						byte r = bytes[ind2];
+						byte g = bytes[ind2+288*352];
+						byte b = bytes[ind2+288*352*2]; 
+						
+						int pix = 0xff000000 | ((r & 0xff) << 16) | ((g & 0xff) << 8) | (b & 0xff);
+						//int pix = ((a << 24) + (r << 16) + (g << 8) + b);
+						nextImg.setRGB(x,y,pix);
+						ind2++;
+					}
+		    	}
+				
+				//Template image for motion search (take the 6th subimage, row-wise from the main image, 3 rows 4 cols)
+				
+				BufferedImage templateImg = img.getSubimage(88,96,88,96);
+				/*
+				int readBytes = 0;
+				byte[] audioBuffer = new byte[EXTERNAL_BUFFER_SIZE];
+				
+				try {
+					audioInputStream.skip((long) (frameNo*SOUND_INDEX));
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				try {
+				    if (readBytes != -1) {
+					readBytes = audioInputStream.read(audioBuffer, (frameNo*SOUND_INDEX),
+						audioBuffer.length);
+				    }
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}*/
+				
+				XMLEventFactory ef = XMLEventFactory.newInstance();
+				XMLEvent end = ef.createDTD("\n");
+				XMLEvent tab = ef.createDTD("\t");
+				// Get dominant color of image
+				String color = extractColor(img);
+				ew.add(tab);
+				ew.add(tab);
+				ew.add(ef.createStartElement("", "", "color"));
+				Characters content = ef.createCharacters(color);
+				ew.add(content);
+				ew.add(ef.createEndElement("", "", "color"));
+				ew.add(end);
+				// Get relative motion
+				//String motion = extractMotion(templateImg,nextImg);
+				String motion = "none";
+				ew.add(tab);
+				ew.add(tab);
+				ew.add(ef.createStartElement("", "", "motion"));
+				Characters content2 = ef.createCharacters(motion);
+				ew.add(content2);
+				ew.add(ef.createEndElement("", "", "motion"));
+				ew.add(end);
+				// Get relative audio
+				String audio = extractAudio(frameNo);
+				ew.add(tab);
+				ew.add(tab);
+				ew.add(ef.createStartElement("", "", "audio"));
+				Characters content3 = ef.createCharacters(audio);
+				ew.add(content3);
+				ew.add(ef.createEndElement("", "", "audio"));
+				ew.add(end);
+			
 	
 	}
 	
@@ -244,6 +375,165 @@ public class VideoPreProcessor {
 		
 		return color;
 	}
-
 	
+
+	//returns a string with a direction and a velocity (upfast, downslow, leftmed, rightmed, etc.) using Template Matching
+	//Sum of Absolute Differences
+	private String extractMotion(BufferedImage templateFrame, BufferedImage futureFrame) {
+		String motion = "";
+		double minRedSAD = 100;
+		double minGreenSAD = 100;
+		double minBlueSAD = 100;
+		double SAD = 0.0;
+		double redSAD = 0.0;
+		double greenSAD = 0.0;
+		double blueSAD = 0.0;
+		int bestRedRow = 0;
+		int bestRedCol = 0;
+		int bestBlueRow = 0;
+		int bestBlueCol = 0;
+		int bestGreenRow = 0;
+		int bestGreenCol = 0;
+		double bestRedSAD = 0.0;
+		double bestBlueSAD = 0.0;
+		double bestGreenSAD = 0.0;
+		
+		// loop through the search image
+		for ( int y = 0; y < 288 - 96; y++ ) {
+		    for ( int x = 0; x < 352 - 88; x++ ) {
+		        redSAD = 0.0;
+		        greenSAD = 0.0;
+		        blueSAD = 0.0;
+		 
+		        // loop through the template image
+		        for ( int j = 0; j < 96; j++ )
+		            for ( int i = 0; i < 88; i++ ) {
+		            	
+		            	int color = futureFrame.getRGB(x+i, y+j);
+		            	int  red = (color & 0x00ff0000) >> 16;
+		            	//int  green = (color & 0x0000ff00) >> 8;
+		            	//int  blue = color & 0x000000ff;
+		            	
+		            	int templateColor = templateFrame.getRGB(i,j);
+		            	int  templateRed = (templateColor & 0x00ff0000) >> 16;
+		            	//int  templateGreen = (color & 0x0000ff00) >> 8;
+		            	//int  templateBlue = color & 0x000000ff;
+		            	
+		                //int pixel1 p_SearchIMG = futureFrame[x+i][y+j];
+		                //int pixel2 p_TemplateIMG = frame[i][j];
+		 
+		                redSAD += Math.abs( (double)red - (double)templateRed );
+		                //greenSAD += abs( (double)green - (double)templateGreen );
+		                //blueSAD += abs( (double)blue - (double)templateBlue );
+		            }
+		 
+		        // save the best found position 
+		        if ( minRedSAD > redSAD ) { 
+		            minRedSAD = redSAD;
+		            // give me VALUE_MAX
+		            bestRedRow = x;
+		            bestRedCol = y;
+		            bestRedSAD = redSAD;
+		        }
+		        /*
+		        if ( minGreenSAD > greenSAD ) { 
+		            minGreenSAD = greenSAD;
+		            // give me VALUE_MAX
+		            bestGreenRow = x;
+		            bestGreenCol = y;
+		            bestGreenSAD = greenSAD;
+		        }
+		        if ( minBlueSAD > blueSAD ) { 
+		            minBlueSAD = blueSAD;
+		            // give me VALUE_MAX
+		            bestBlueRow = x;
+		            bestBlueCol = y;
+		            bestBlueSAD = blueSAD;
+		        }
+		        */
+		        
+		    }
+		}
+		
+		System.out.println(bestRedRow);
+		System.out.println(bestRedCol);
+		
+		//compute only red (gray) intensity for now
+		
+		if (bestRedRow<144-96 && bestRedCol <176-88){
+			motion = "UpLeft";
+		}
+		else if (bestRedRow>144-96 && bestRedCol <176-88){
+			motion = "DownLeft";
+		}
+		else if (bestRedRow<144-96 && bestRedCol >176-88){
+			motion = "UpRight";
+		}
+		else if (bestRedRow>144-96 && bestRedCol >176-88){
+			motion = "DownRight";
+		}
+		
+		return motion;
+	}
+	
+	//Returns a number 0-100
+	private String extractAudio(int frameNo) {
+		Integer audio = 0;
+		int readBytes = 0;
+		byte[] audioBuffer = new byte[EXTERNAL_BUFFER_SIZE];
+		
+		/*
+		try {
+			audioInputStream.skip((long) (frameNo*SOUND_INDEX));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/
+		/*
+		try {
+		    if (readBytes != -1) {
+			readBytes = audioInputStream.read(audioBuffer, (frameNo*SOUND_INDEX),
+				audioBuffer.length);
+			audio = calculateRMSLevel(audioBuffer);
+		    }
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		*/
+		return audio.toString();
+	}
+	
+	//Returns the Root Mean Square of the audio data at a given frame.
+	public int calculateRMSLevel(byte[] audioData)
+    { 
+        long lSum = 0;
+        for(int i=0; i<audioData.length; i++)
+            lSum = lSum + audioData[i];
+ 
+        double dAvg = lSum / audioData.length;
+ 
+        double sumMeanSquare = 0d;
+        for(int j=0; j<audioData.length; j++)
+            sumMeanSquare = sumMeanSquare + Math.pow(audioData[j] - dAvg, 2d);
+ 
+        double averageMeanSquare = sumMeanSquare / audioData.length;
+        return (int)(Math.pow(averageMeanSquare,0.5d) + 0.5);
+    }
+	
+	public class PlayWaveException extends Exception {
+
+	    public PlayWaveException(String message) {
+		super(message);
+	    }
+
+	    public PlayWaveException(Throwable cause) {
+		super(cause);
+	    }
+
+	    public PlayWaveException(String message, Throwable cause) {
+		super(message, cause);
+	    }
+
+	}
 }

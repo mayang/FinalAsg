@@ -1,6 +1,8 @@
 // CS 576 - ASG 1
 // may ang
 // mayang@usc.edu
+// spencer frazier
+// sjfrazie@usc.edu
 
 import java.awt.*;
 import java.awt.event.ActionEvent;
@@ -21,6 +23,13 @@ import javax.xml.xpath.XPathFactory;
 import javax.xml.xpath.XPathConstants;
 
 import javax.management.modelmbean.XMLParseException;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.UnsupportedAudioFileException;
+import javax.sound.sampled.DataLine.Info;
 import javax.swing.*;
 
 import org.w3c.dom.Node;
@@ -34,7 +43,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    public static void main(String[] args) 
    {
 	   	String fileName = args[0];
-   		
+   		String soundFileName = args[1];
    		int width = 352; 
    		int height = 288;
    		//String fileName = "../image1.rgb";
@@ -44,16 +53,16 @@ public class VideoSearch implements MouseListener, MouseMotionListener
     		byteIndicies[b] = b * 304128;
     	}
     	
-   		//VideoPreProcessor vpp = new VideoPreProcessor("vdos", byteIndicies);
-   		//vpp.fileTraverse();
-    	//fileNames = (vpp.getFileNames()).toArray(new String[0]);
+//   		VideoPreProcessor vpp = new VideoPreProcessor("vdos", byteIndicies);
+//   		vpp.fileTraverse();
+//    	fileNames = (vpp.getFileNames()).toArray(new String[0]);
     	
     	// temp so i don't have to preprocess every fucking time I run this
     	String[] temp = {"vdo3", "vdo4", "vdo6"}; 
     	fileNames = temp;
    		
    		
-   		VideoSearch ir = new VideoSearch(width, height, fileName);
+   		VideoSearch ir = new VideoSearch(width, height, fileName, soundFileName);
    		// for video!
 	    if (vidFlag) {
 	    	ir.fps.start();
@@ -91,11 +100,25 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    public static String audio; // audio to be matched
    public static int[] audioFrames; // frames of matched audio
    
-   public static BufferedImage blankFrame;
-      
+   public static File soundFile;
+   public static FileInputStream sound;
+   public static boolean dataLineFlushed;
+   public static byte[] soundBytes;
+   //public final int soundByteCount = 25518752;   
+   public static int[] soundByteIndicies;
+   public static InputStream waveStream;
+   private final int EXTERNAL_BUFFER_SIZE = 524288; // 128Kb
+   //private final int EXTERNAL_BUFFER_SIZE = 500000;
+   public static SourceDataLine dataLine;
+   public static AudioInputStream audioInputStream;
+   public static boolean isAlreadyPlaying = false;
+   Thread soundThread;
    Timer fps;
    
-   public VideoSearch(int width, int height, String fileName)
+   public static BufferedImage blankFrame;
+
+   
+   public VideoSearch(int width, int height, String fileName, String soundFileName)
    {
 	
 	    state = 2;
@@ -105,7 +128,27 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	    img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
 	    //Reading File
 	    try {
-		    File file = new File(fileName);
+	    	File file = new File(fileName);
+		    InputStream is = new FileInputStream(file);
+		    
+	    	soundFile = new File(soundFileName);
+		    InputStream sis = new FileInputStream(soundFile);
+		    
+		    long len = file.length();
+		    long slen = soundFile.length();
+		    
+		    bytes = new byte[(int) len];
+		    soundBytes = new byte[(int) slen];
+		    
+//		    System.out.println("file length:"+ len);
+			audioInputStream = null;
+			try {
+			    audioInputStream = AudioSystem.getAudioInputStream(sis);
+			} catch (UnsupportedAudioFileException e1) {
+			    new PlayWaveException(e1);
+			} catch (IOException e1) {
+			    new PlayWaveException(e1);
+			}
 		    // is this a full path name?
 		    int slash = fileName.lastIndexOf("\\");
 		    int dot = fileName.indexOf(".");
@@ -118,10 +161,6 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		   // bytes = vpp.getFileBytes(currVid);
 		    
 //		   // System.out.println(currVid);
-		    InputStream is = new FileInputStream(file);
-	
-		    long len = file.length();
-		    bytes = new byte[(int) len];
 		    
 		    
 //		    System.out.println("file length:"+ len);
@@ -183,6 +222,8 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		}
 		blankFrame = scaleImage(blankFrame, width, height, .2);
 	    strip1Start = 0;
+	    strip2Start = 0;
+	    strip3Start = 0;
 	    // Debuggin'
 //	    System.out.println("image dimensions");
 //	    System.out.println(width);
@@ -395,6 +436,48 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 				strip2 = new JPanel();
 				showMatchedFrames(strip2, width, height, "", "", 0, null);
 				strip2.setAlignmentX(Component.CENTER_ALIGNMENT);
+				strip2.addMouseListener(new MouseListener() {
+					
+					@Override
+					public void mouseReleased(MouseEvent e) {
+						// TODO Auto-generated method stub
+						
+					}
+					
+					@Override
+					public void mousePressed(MouseEvent e) {
+						// TODO Auto-generated method stub
+						System.out.println(e.getX() + " and " + e.getY());
+						System.out.println(e.getX() / 70);
+						currFrame = motionFrames[(e.getX() / 70) + strip2Start];
+						if (currFrame > motionFrames.length - 1) {
+							currFrame -= motionFrames.length;
+						}
+						bytes = searchBytes1;
+						currVid = search1;
+						img = refreshFrame(currFrame);
+						videoOriginal(img);	
+						showVideoStrip(currStrip, 352, 288);
+					}
+					
+					@Override
+					public void mouseExited(MouseEvent e) {
+						// TODO Auto-generated method stub
+						
+					}
+					
+					@Override
+					public void mouseEntered(MouseEvent e) {
+						// TODO Auto-generated method stub
+						
+					}
+					
+					@Override
+					public void mouseClicked(MouseEvent e) {
+						// TODO Auto-generated method stub
+						
+					}
+				});
 			searchStrip2Panel.add(strip2);
 			MyButton nextButtonSearch2 = new MyButton("NextSearch2", next);
 			nextButtonSearch2.setAlignmentX(Component.RIGHT_ALIGNMENT);
@@ -412,6 +495,48 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 				// Actual Frames
 				strip3 = new JPanel();
 				showMatchedFrames(strip3, width, height, "", "", 0, null);
+				strip3.addMouseListener(new MouseListener() {
+					
+					@Override
+					public void mouseReleased(MouseEvent e) {
+						// TODO Auto-generated method stub
+						
+					}
+					
+					@Override
+					public void mousePressed(MouseEvent e) {
+						System.out.println(e.getX() + " and " + e.getY());
+						System.out.println(e.getX() / 70);
+						currFrame = audioFrames[(e.getX() / 70) + strip3Start];
+						if (currFrame > audioFrames.length - 1) {
+							currFrame -= audioFrames.length;
+						}
+						bytes = searchBytes1;
+						currVid = search1;
+						img = refreshFrame(currFrame);
+						videoOriginal(img);	
+						showVideoStrip(currStrip, 352, 288);
+						
+					}
+					
+					@Override
+					public void mouseExited(MouseEvent e) {
+						// TODO Auto-generated method stub
+						
+					}
+					
+					@Override
+					public void mouseEntered(MouseEvent e) {
+						// TODO Auto-generated method stub
+						
+					}
+					
+					@Override
+					public void mouseClicked(MouseEvent e) {
+						// TODO Auto-generated method stub
+						
+					}
+				});
 				strip3.setAlignmentX(Component.CENTER_ALIGNMENT);
 			searchStrip3Panel.add(strip3);
 			MyButton nextButtonSearch3 = new MyButton("NextSearch3", next);
@@ -591,19 +716,20 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 //		Read current frame's xml file
 		XPathFactory xpf = XPathFactory.newInstance(); 
 		XPath xpath = xpf.newXPath();
+		System.out.println(currVid);
 		InputSource is = new InputSource(new FileInputStream(currVid + ".xml"));
 		
 		// Query for the descriptors of this frame
 		String fno = Integer.toString(currFrame);
 		String queryColor = "/video/frame[@no=" + fno + "]/color";
 		color = xpath.evaluate(queryColor , is);
-		System.out.println(color);
+		System.out.println(queryColor + " " + color);
 		is = new InputSource(new FileInputStream(currVid + ".xml"));
-		String queryMotion = "/video/frame[@no" + fno + "]/motion";
+		String queryMotion = "/video/frame[@no=" + fno + "]/motion";
 		motion = xpath.evaluate(queryMotion, is);
-		System.out.println(motion);
+		System.out.println(queryMotion + " " + motion);
 		is = new InputSource(new FileInputStream(currVid + ".xml"));
-		String queryAudio = "/video/frame[@no" + fno + "]/audio";
+		String queryAudio = "/video/frame[@no=" + fno + "]/audio";
 		audio = xpath.evaluate(queryAudio, is);
 		
 		// read in search file vdos/vdo*/vdo*.rgb
@@ -638,7 +764,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		// Call showMatchedFrame, 
 		// shit how am i to pick which strip, new arg to do later i guess get this one showing first
 		showMatchedFrames(strip1, 352, 288, search1, color, strip1Start, colorFrames);
-		showMatchedFrames(strip3, 352, 288, search1, motion, strip2Start, motionFrames);
+		showMatchedFrames(strip2, 352, 288, search1, motion, strip2Start, motionFrames);
 		showMatchedFrames(strip3, 352, 288, search1, audio, strip3Start, audioFrames);
 	}
 
@@ -674,22 +800,37 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	{
 		if (name.equals("Play")) { // Play
 			state = 0;
+			soundThread = null;
+			soundThread = new Thread(new RefreshSound());
 			fps.start();
+			soundThread.start();
+			isAlreadyPlaying = true;
+			//dataLineFlushed = false;
 		} else if (name.equals("Pause")) { // Pause
 			state = 1;
-			//BufferedImage f 
-			img = refreshFrame(currFrame);
-			//if (view == 0) {
-			videoOriginal(img);
 			fps.stop();
+			try {
+				audioInputStream.close();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			soundThread.interrupt();
+			dataLine.stop();
+			dataLine.flush();
+			dataLine.close();
 		} else if (name.equals("Stop")) { // Stop
 			state = 2;
-			currFrame = 0;
-			//BufferedImage f
-			img = refreshFrame(currFrame);
+			//fps.stop();
+			currFrame=0;
+			BufferedImage f = refreshFrame(currFrame);
 			//if (view == 0) {
-			videoOriginal(img);
-			fps.stop();
+			videoOriginal(f);
+			isAlreadyPlaying = false;
+			soundThread.interrupt();
+			dataLine.stop();
+			dataLine.flush();
+			dataLine.close();
 		} else if (name.equals("Search")) {
 			// search only if not playing
 			if (state != 0) {
@@ -854,29 +995,149 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 				++currFrame;
 				if (currFrame == 720) {
 					currFrame = 0;
+					soundThread.interrupt();
+					dataLine.stop();
+					dataLine.flush();
+					dataLine.close();
+					soundThread = null;
+					soundThread = new Thread(new RefreshSound());
+					soundThread.start();
 				}
 				//BufferedImage f 
 				img = refreshFrame(currFrame);
 				//if (view == 0) {
 				videoOriginal(img);
 			} else if (state == 1) { // pause
-//				//BufferedImage f 
-//				img = refreshFrame(currFrame);
-//				//if (view == 0) {
-//				videoOriginal(img);
-				//fps.stop();
+				BufferedImage f = refreshFrame(currFrame);
+				//if (view == 0) {
+				videoOriginal(f);
+				fps.stop();
 			} else if (state == 2) { // stop
 //				currFrame = 0;
-//				//BufferedImage f
-//				img = refreshFrame(currFrame);
-//				//if (view == 0) {
-//				videoOriginal(img);
-//				fps.stop();
+				BufferedImage f = refreshFrame(currFrame);
+				//if (view == 0) {
+				videoOriginal(f);
+				fps.stop();
 			}
 
 
 		  // System.out.println("Frame:" + currFrame);
+			
 		}
 	}
 	
+	protected int calculateRMSLevel(byte[] audioData)
+    { // audioData might be buffered data read from a data line
+        long lSum = 0;
+        for(int i=0; i<audioData.length; i++)
+            lSum = lSum + audioData[i];
+ 
+        double dAvg = lSum / audioData.length;
+ 
+        double sumMeanSquare = 0d;
+        for(int j=0; j<audioData.length; j++)
+            sumMeanSquare = sumMeanSquare + Math.pow(audioData[j] - dAvg, 2d);
+ 
+        double averageMeanSquare = sumMeanSquare / audioData.length;
+        return (int)(Math.pow(averageMeanSquare,0.5d) + 0.5);
+    }
+	
+	public class RefreshSound implements Runnable {
+		public void run() {
+			// Obtain the information about the AudioInputStream
+			
+				InputStream sis = null;
+				try {
+					sis = new FileInputStream(soundFile);
+				} catch (FileNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				
+				long slen = soundFile.length();
+		    
+				soundBytes = new byte[(int) slen];
+		    
+//		   		 System.out.println("file length:"+ len);
+					audioInputStream = null;
+						try {
+			    audioInputStream = AudioSystem.getAudioInputStream(sis);
+					} catch (UnsupportedAudioFileException e1) {
+			    new PlayWaveException(e1);
+					} catch (IOException e1) {
+			    new PlayWaveException(e1);
+			}
+						AudioFormat audioFormat = audioInputStream.getFormat();
+						Info info = new Info(SourceDataLine.class, audioFormat);
+
+						// opens the audio channel
+						
+						dataLine = null;
+						try {
+						    dataLine = (SourceDataLine) AudioSystem.getLine(info);
+						    dataLine.open(audioFormat, EXTERNAL_BUFFER_SIZE);
+						} catch (LineUnavailableException e1) {
+						    new PlayWaveException(e1);
+						}
+						
+			dataLine.start();
+
+			int readBytes = 0;
+			byte[] audioBuffer = new byte[EXTERNAL_BUFFER_SIZE];
+			try {
+				audioInputStream.skip((long) (currFrame*7357.0));
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			try {
+			    while (readBytes != -1) {
+			    
+				readBytes = audioInputStream.read(audioBuffer, 0,
+					audioBuffer.length);
+				//System.out.println(readBytes);
+				
+					if (readBytes >= 0){
+				    dataLine.write(audioBuffer, 0, readBytes);
+				    System.out.println(dataLine.getLevel());
+				    //System.out.print("Number of bytes read this round:");System.out.println(readBytes);
+					System.out.println("hi");
+					int level = 0;
+					level = calculateRMSLevel(audioBuffer);
+					System.out.println(level);
+					System.out.println("bye");
+				    AudioFormat af = dataLine.getFormat();
+				    float afloaz = af.getFrameRate();
+				    float samples = af.getSampleRate();
+				    int channels = af.getChannels();
+				    System.out.println(afloaz);
+				    System.out.println(samples);
+				    System.out.println(channels);
+					}
+					//if(readBytes<)
+			    }
+			    //dataLine.stop();
+			} catch (IOException e1) {
+			    new PlayWaveException(e1);
+			}
+			
+	
+		}
+	}
+	
+	public class PlayWaveException extends Exception {
+
+	    public PlayWaveException(String message) {
+		super(message);
+	    }
+
+	    public PlayWaveException(Throwable cause) {
+		super(cause);
+	    }
+
+	    public PlayWaveException(String message, Throwable cause) {
+		super(message, cause);
+	    }
+
+	}
 }
