@@ -11,15 +11,20 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.image.*;
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.xml.stream.*;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+import javax.xml.xpath.XPathConstants;
 
 import javax.management.modelmbean.XMLParseException;
 import javax.swing.*;
 
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
 
@@ -39,8 +44,13 @@ public class VideoSearch implements MouseListener, MouseMotionListener
     		byteIndicies[b] = b * 304128;
     	}
     	
-//   		VideoPreProcessor vpp = new VideoPreProcessor("vdos", byteIndicies);
-//   		vpp.fileTraverse();
+   		//VideoPreProcessor vpp = new VideoPreProcessor("vdos", byteIndicies);
+   		//vpp.fileTraverse();
+    	//fileNames = (vpp.getFileNames()).toArray(new String[0]);
+    	
+    	// temp so i don't have to preprocess every fucking time I run this
+    	String[] temp = {"vdo3", "vdo4", "vdo6"}; 
+    	fileNames = temp;
    		
    		
    		VideoSearch ir = new VideoSearch(width, height, fileName);
@@ -50,6 +60,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	    }
    }
       
+   public static VideoPreProcessor vpp;
    public static BufferedImage img; // img
    public static JFrame frame; // frame for UI
    public static JPanel panel; // panel to be shown
@@ -62,7 +73,16 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    public static JPanel currStrip;  // the video strip of the playing video
    public static int o_width; // original width
    public static int o_height; // original height
-   public static String currVid; // name of current video that is playaing
+   public static String currVid; // name of current video that is playing
+   public static String[] fileNames; // names of all the vid files
+   public static String search1; // name of video of first search strip
+   public static JPanel strip1; // video strip of video that is being searched in the first one
+   public static byte[] searchBytes1;
+  // public static String color; // color to match
+   public static String search2; // name of video of 2nd search strip
+   public static byte[] searchBytes2;
+   public static String search3; // name of video of 3rd search strip
+   public static byte[] searchBytes3;
       
    Timer fps;
    
@@ -85,7 +105,10 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		    } else {
 		    	currVid = fileName.substring(slash + 1, dot);
 		    }
-		   // System.out.println(currVid);
+		    System.out.println(currVid);
+		   // bytes = vpp.getFileBytes(currVid);
+		    
+//		   // System.out.println(currVid);
 		    InputStream is = new FileInputStream(file);
 	
 		    long len = file.length();
@@ -167,63 +190,143 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		buttonPanel.setPreferredSize(new Dimension(200, height));
 	    frame.getContentPane().add(buttonPanel, BorderLayout.EAST);
 		
-	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25)));
+	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25))); // Spacing
 	    
 	    MyButton playButton = new MyButton("Play");
 	    playButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 	    buttonPanel.add(playButton);
 	    
-	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25)));
+	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25))); // Spacing
 	    
 	    MyButton pauseButton = new MyButton("Pause");
 	    pauseButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 	    buttonPanel.add(pauseButton);
 	    
-	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25)));
+	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25))); // Spacing
 	    
 	    MyButton stopButton = new MyButton("Stop");
 	    stopButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 	    buttonPanel.add(stopButton);
 	    
-	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25)));
+	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25))); // Spacing
 	    
 	    MyButton searchButton = new MyButton("Search");
 	    searchButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 	    buttonPanel.add(searchButton);
 	    
-	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25)));
+	    buttonPanel.add(Box.createRigidArea(new Dimension(0, 25))); // Spacing
 	    
 		MyButton closeButton = new MyButton("Close");
 		closeButton.setAlignmentX(Component.CENTER_ALIGNMENT);
 		buttonPanel.add(closeButton);	
 		
+		// Panel of strips
+		JPanel stripsPanel = new JPanel();
+		stripsPanel.setLayout(new BoxLayout(stripsPanel, BoxLayout.Y_AXIS));
+		stripsPanel.setPreferredSize(new Dimension(width, 400));
+			// This videos image strip
+			JPanel videoStripPanel = new JPanel();
+			videoStripPanel.setLayout(new BoxLayout(videoStripPanel, BoxLayout.X_AXIS));
+			videoStripPanel.setPreferredSize(new Dimension(width, 100));
+			
+			MyButton prevButton = new MyButton("Prev", new ImageIcon("images/left.gif"));
+			prevButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+			videoStripPanel.add(prevButton);
+			
+				currStrip = new JPanel();
+				startFrame = currFrame;
+				showVideoStrip(currStrip, width, height);
+				currStrip.addMouseListener(new MouseListener() {
+					@Override
+					public void mouseReleased(MouseEvent e) {
+						// TODO Auto-generated method stub
+					}
+					
+					@Override
+					public void mousePressed(MouseEvent e) {
+						// TODO Auto-generated method stub
+						System.out.println(e.getX() + " and " + e.getY());
+						System.out.println(e.getX() / 70);
+						currFrame = (e.getX() / 70) + startFrame;
+						if (currFrame > 719) {
+							currFrame -= 720;
+						}
+						img = refreshFrame(currFrame);
+						//if (view == 0) {
+						videoOriginal(img);					
+					}
+					
+					@Override
+					public void mouseExited(MouseEvent e) {
+						// TODO Auto-generated method stub
+					}
+					
+					@Override
+					public void mouseEntered(MouseEvent e) {
+						// TODO Auto-generated method stub
+					}
+					
+					@Override
+					public void mouseClicked(MouseEvent e) {
+						// TODO Auto-generated method stub
+					}
+				});
+				currStrip.setAlignmentX(Component.CENTER_ALIGNMENT);
+			videoStripPanel.add(currStrip);
+			
+			MyButton nextButton = new MyButton("Next", new ImageIcon("images/right.gif"));
+			nextButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
+			videoStripPanel.add(nextButton);
+			videoStripPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
+		stripsPanel.add(videoStripPanel);
+		
+			/////////////////////////////////////////
+			// Search Panel 1 (Color)
+			JPanel searchStrip1Panel = new JPanel();
+			searchStrip1Panel.setLayout(new BoxLayout(searchStrip1Panel, BoxLayout.Y_AXIS));
+			searchStrip1Panel.setPreferredSize(new Dimension(width, 100));
+			JComboBox<String> fileList1 = new JComboBox<String>(fileNames);
+			fileList1.setPreferredSize(new Dimension(width, 10));
+			fileList1.setSelectedIndex(0);
+			fileList1.addActionListener(new ActionListener() {
+			//	@Override
+				public void actionPerformed(ActionEvent e) {
+					JComboBox<String> cb = (JComboBox<String>) e.getSource();
+					search1 = (String) cb.getSelectedItem();
+					System.out.println(search1);
+				}
+			});
+			fileList1.setAlignmentX(Component.CENTER_ALIGNMENT);
+			searchStrip1Panel.add(fileList1);
+			// The search strip for this video
+			//stripsPanel.add(searchStrip1Panel);
+			// The actual frames for this search
+				JPanel strip1Panel = new JPanel();
+				strip1Panel.setLayout(new BoxLayout(strip1Panel, BoxLayout.X_AXIS));
+				strip1Panel.setPreferredSize(new Dimension(width, 100));
 				
-		// This videos image strip
-		JPanel videoStripPanel = new JPanel();
-		videoStripPanel.setLayout(new BoxLayout(videoStripPanel, BoxLayout.X_AXIS));
-		videoStripPanel.setPreferredSize(new Dimension(width, 100));
+				MyButton prevButtonSearch1 = new MyButton("PrevSearch1", new ImageIcon("images/left.gif"));
+				prevButtonSearch1.setAlignmentX(Component.LEFT_ALIGNMENT);
+				strip1Panel.add(prevButtonSearch1);
+					
+					// the actual frames
+					strip1 = new JPanel();
+					showMatchedFrames(strip1, width, height, "", "");
+					strip1.setAlignmentX(Component.CENTER_ALIGNMENT);
+					
+				strip1Panel.add(strip1);
+				MyButton nextButtonSearch1 = new MyButton("NextSearch1", new ImageIcon("images/right.gif"));
+				nextButtonSearch1.setAlignmentX(Component.RIGHT_ALIGNMENT);
+				strip1Panel.add(nextButtonSearch1);
+			searchStrip1Panel.add(strip1Panel);
+			// add to the main strip panel
+			searchStrip1Panel.setAlignmentX(Component.CENTER_ALIGNMENT);
+		stripsPanel.add(searchStrip1Panel);
+			
 		
-		MyButton prevButton = new MyButton("Prev", new ImageIcon("images/left.gif"));
-		prevButton.setAlignmentX(Component.LEFT_ALIGNMENT);
-		videoStripPanel.add(prevButton);
-		
-		currStrip = new JPanel();
-		startFrame = currFrame;
-		showVideoStrip(currStrip, width, height);
-		currStrip.addMouseListener(this);
-		currStrip.addMouseMotionListener(this);
-		currStrip.setAlignmentX(Component.CENTER_ALIGNMENT);
-		videoStripPanel.add(currStrip);
-		
-		MyButton nextButton = new MyButton("Next", new ImageIcon("images/right.gif"));
-		nextButton.setAlignmentX(Component.RIGHT_ALIGNMENT);
-		videoStripPanel.add(nextButton);
-		
-		frame.getContentPane().add(videoStripPanel, BorderLayout.SOUTH);
-
-		
-		
-	    frame.pack();
+		frame.getContentPane().add(stripsPanel, BorderLayout.SOUTH);
+	
+		frame.pack();
 	    frame.setVisible(true); 
 	    
    }
@@ -291,7 +394,6 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		strip.repaint();
 	}
    
- 
 	
 	// get next frame
 	public BufferedImage refreshFrame(int currFrame) {
@@ -329,20 +431,84 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	   panel.repaint();
 	}
 
+	public void showMatchedFrames(JPanel strip, int w, int h, String vidName, String search) {
+		// Make a blank tile, for use when there's no search and when there's less matches then are shown though i think that's really unlikely   
+		BufferedImage blankFrame = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+		for (int y = 0; y < blankFrame.getHeight(); ++y) {
+			for (int x = 0; x < blankFrame.getWidth(); ++x) {
+				blankFrame.setRGB(x, y, 0x00FFFFFF);
+			}
+		}
+		blankFrame = scaleImage(blankFrame, w, h, .2);
+		//int loopcount = 0;
+		
+		// Call get Frames
+		if (vidName.compareTo("") != 0) {
+			try {
+				List<Integer> colorFrames = getMatchedFrames("color", search);
+			} catch (FileNotFoundException | XPathExpressionException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		// get image
+		strip.removeAll();
+		strip.setLayout(new BoxLayout(strip, BoxLayout.X_AXIS));
+		strip.setPreferredSize(new Dimension(w-20, 100));
+		JLabel label;
+		for (int i = 0; i < 6; ++i) {
+			if (vidName.compareTo("") == 0 ) {
+				label = new JLabel(new ImageIcon(blankFrame));
+				strip.add(label);
+			}
+			
+		}
+		strip.revalidate();
+		strip.repaint();
+		
+	}
+	
 	//////////////////////////////////////////////////////////
 	/// SEARCH STUFF 
 	////////////////////////////////////////////////////////////
+	
+	// Gets search parameters from the current frame
 	public void extractSearchParams() throws XPathExpressionException, FileNotFoundException {
 //		Read current frame's xml file
 		XPathFactory xpf = XPathFactory.newInstance(); 
 		XPath xpath = xpf.newXPath();
 		InputSource is = new InputSource(new FileInputStream(currVid + ".xml"));
+		// get color of this frame
 		String fno = Integer.toString(currFrame);
 		String query = "/video/frame[@no=" + fno + "]/color";
 		String color = xpath.evaluate(query , is);
 		System.out.println(color);
 		
+		// read in search file
+		
+		// Call showMatchedFrame
+		showMatchedFrames(strip1, 352, 288, search1, color);
 	}
+
+	// get frames with this search parameter and display them
+	public List<Integer> getMatchedFrames(String param, String desc) throws FileNotFoundException, XPathExpressionException {
+		List<Integer> frames = new ArrayList<Integer>();
+		XPathFactory xpf = XPathFactory.newInstance();
+		XPath xpath = xpf.newXPath();
+		InputSource is = new InputSource(new FileInputStream(search1 + ".xml"));
+		String query = "/video/frame[" + param + "=\"" + desc + "\"]/@no";
+		System.out.println(query);
+		NodeList nodes = (NodeList) xpath.evaluate(query, is, XPathConstants.NODESET);
+		//System.out.println(nodes == null);
+		for (int i = 0; i < 6; ++i) {
+			System.out.println(nodes.item(i).getTextContent());
+		}
+		
+		
+		return frames;
+	}
+	
 	
 	
 	
@@ -373,6 +539,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		} else if (name.equals("Search")) {
 			// search only if not playing
 			if (state != 0) {
+				// extract what to match
 				try {
 					extractSearchParams();
 				} catch (XPathExpressionException | FileNotFoundException e) {
@@ -380,6 +547,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 					e.printStackTrace();
 				}
 			}
+			
 		} else if (name.equals("Close")) { // close
 			System.exit(0);
 		} else if (name.equals("Prev")) { // Prev
@@ -399,10 +567,9 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		}
 	}
 	
-	
+	// frame indexing for current frame, this might have to be moved directly into the function
 	@Override
 	public void mouseClicked(MouseEvent arg0) {
-		// TODO Auto-generated method stub
 		System.out.println(arg0.getX() + " and " + arg0.getY());
 		System.out.println(arg0.getX() / 70);
 		currFrame = (arg0.getX() / 70) + startFrame;
@@ -410,9 +577,9 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 			// TODO Handle Cycle
 			currFrame -= 720;
 		}
-		BufferedImage f = refreshFrame(currFrame);
+		img = refreshFrame(currFrame);
 		//if (view == 0) {
-		videoOriginal(f);
+		videoOriginal(img);
 		//moveTiles(arg0.getX(), arg0.getY());
 	}
 
@@ -512,4 +679,5 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		  // System.out.println("Frame:" + currFrame);
 		}
 	}
+	
 }

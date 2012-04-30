@@ -4,6 +4,7 @@
 import java.awt.*;
 import java.awt.image.*;
 import java.io.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -23,12 +24,15 @@ public class VideoPreProcessor {
 	File root; // root of where the videos are
 	public static int[] byteIndicies; // keeps indexes where new frames start;
 	public static byte[] bytes; // bytes from file
+	public static List<String> fileNames; // names of files
+	public static Map<String, byte[]> fileBytes; // bytes of the files
 	
 	// constructor
 	public VideoPreProcessor(String folderpath, int[] bi) {
 		System.out.println("Video PreProcessor called");
 		root = new File(folderpath);
-		
+		fileNames = new ArrayList<String>();
+		fileBytes = new HashMap<String, byte[]>();
 		// get where frames start
     	byteIndicies = bi;
 	}
@@ -54,6 +58,7 @@ public class VideoPreProcessor {
 			File contents[] = curr.listFiles();
 			if (contents.length == 2 && contents[0].isFile() && contents[1].isFile()) {
 				// TODO This is a "video!" preprocess this
+				fileNames.add(curr.getName());
 				processVideo(contents[0], contents[1]);
 			} else {
 				// recurse through other folders
@@ -62,6 +67,14 @@ public class VideoPreProcessor {
 				}
 			}
 		} 
+	}
+	
+	public List<String> getFileNames() {
+		return fileNames;
+	}
+
+	public byte[] getFileBytes(String key) {
+		return fileBytes.get(key);
 	}
 	
 	// reads in this video file
@@ -79,6 +92,10 @@ public class VideoPreProcessor {
         while (offset < bytes.length && (numRead=is.read(bytes, offset, bytes.length-offset)) >= 0) {
         	offset += numRead;
         }
+        
+        //String key = (video.getName()).substring(0, video.getName().indexOf("."));
+//        System.out.println(key);
+//        fileBytes.put(key, bytes);
 	}
 	
 	
@@ -227,5 +244,6 @@ public class VideoPreProcessor {
 		
 		return color;
 	}
+
 	
 }
