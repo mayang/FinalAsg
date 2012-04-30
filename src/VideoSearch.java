@@ -306,7 +306,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 					public void mousePressed(MouseEvent e) {
 						// TODO Auto-generated method stub
 						System.out.println(e.getX() + " and " + e.getY());
-						System.out.println(e.getX() / 70);
+						System.out.println(e.getX() / 70 + startFrame);
 						currFrame = (e.getX() / 70) + startFrame;
 						if (currFrame > 719) {
 							currFrame -= 720;
@@ -383,11 +383,13 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 						public void mousePressed(MouseEvent e) {
 							// TODO Auto-generated method stub
 							System.out.println(e.getX() + " and " + e.getY());
-							System.out.println(e.getX() / 70);
-							currFrame = colorFrames[(e.getX() / 70) + strip1Start];
-							if (currFrame > colorFrames.length - 1) {
-								currFrame -= colorFrames.length;
+							System.out.println(e.getX() / 70 );
+							int curri = (e.getX() / 70) + strip1Start;
+					
+							if (curri > colorFrames.length - 1) {
+								curri -= colorFrames.length;
 							}
+							currFrame = colorFrames[curri];
 							bytes = searchBytes1;
 							currVid = search1;
 							img = refreshFrame(currFrame);
@@ -448,11 +450,13 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 					public void mousePressed(MouseEvent e) {
 						// TODO Auto-generated method stub
 						System.out.println(e.getX() + " and " + e.getY());
-						System.out.println(e.getX() / 70);
-						currFrame = motionFrames[(e.getX() / 70) + strip2Start];
-						if (currFrame > motionFrames.length - 1) {
-							currFrame -= motionFrames.length;
+						System.out.println(e.getX() / 70 );
+						int curri = (e.getX() / 70) + strip2Start;
+				
+						if (curri > motionFrames.length - 1) {
+							curri -= motionFrames.length;
 						}
+						currFrame = motionFrames[curri];
 						bytes = searchBytes1;
 						currVid = search1;
 						img = refreshFrame(currFrame);
@@ -506,11 +510,13 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 					@Override
 					public void mousePressed(MouseEvent e) {
 						System.out.println(e.getX() + " and " + e.getY());
-						System.out.println(e.getX() / 70);
-						currFrame = audioFrames[(e.getX() / 70) + strip3Start];
-						if (currFrame > audioFrames.length - 1) {
-							currFrame -= audioFrames.length;
+						System.out.println(e.getX() / 70 );
+						int curri = (e.getX() / 70) + strip3Start;
+				
+						if (curri > audioFrames.length - 1) {
+							curri -= audioFrames.length;
 						}
+						currFrame = audioFrames[curri];
 						bytes = searchBytes1;
 						currVid = search1;
 						img = refreshFrame(currFrame);
@@ -690,7 +696,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 				label = new JLabel(new ImageIcon(blankFrame));
 				strip.add(label);
 			} else {
-				if (i > frames.length) { // cycle? why aren't you cycling back!
+				if (i > frames.length - 1) { 
 					i = 0;
 					end = 6 - loopcount;
 				}
@@ -870,7 +876,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 			}
 			showMatchedFrames(strip1, 352, 288, search1, color, strip1Start, colorFrames);
 		} else if (name.equals("NextSearch1")) {
-			if (strip1Start < colorFrames.length) {
+			if (strip1Start < colorFrames.length - 1) {
 				++strip1Start;
 			} else {
 				strip1Start = 0;
@@ -884,7 +890,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 			}
 			showMatchedFrames(strip2, 352, 288, search1, motion, strip2Start, motionFrames);
 		} else if (name.equals("NextSearch2")) {
-			if (strip2Start < motionFrames.length) {
+			if (strip2Start < motionFrames.length - 1) {
 				++strip2Start;
 			} else {
 				strip2Start = 0;
@@ -898,7 +904,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 			}
 			showMatchedFrames(strip3, 352, 288, search1, audio, strip3Start, audioFrames);
 		} else if (name.equals("NextSearch3")) {
-			if (strip3Start < audioFrames.length) {
+			if (strip3Start < audioFrames.length - 1) {
 				++strip3Start;
 			} else {
 				strip3Start = 0;
