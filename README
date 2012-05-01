@@ -1,0 +1,26 @@
+README
+
+To run in eclipse. Arguments are the rgb file and the .wav file
+
+This program plays a video. And when paused or stopped can search through another video (or itself) for frames that contain
+similar descriptors to the shown frame. The searches implemented are color, motion, audio.
+
+
+Files:
+VideoSearch.java
+Main class. Does the display stuff, video stuff, indexing, etc
+VideoPreProcessor.java
+Does all the preprocessing of all the videos. Stored descriptors into an xml file per video. the input video is assumed to be 
+amung these videos.
+
+Instructions:
+The videos to be used must be in a file named vdo in the same director as the src folder for running in Eclipse.
+Each video must be in its own folder with the folder the .rgb file and the .wav file having the same name
+
+The .xml files that the PreProcessor generates that VideoSearch queries to get the descriptors of the frames should stay where
+they are. Don't move them to another folder. 
+
+To search for similar frames. The video must be paused or stopped and a video must be selected from the drop down menu to search
+against. Even if a name of a video is showing in it it still must be selected. The strips show in order frames with similar color,
+motion, and audio levels. Frames can be clicked to play the searched video from that frame.
+

@@ -53,13 +53,13 @@ public class VideoSearch implements MouseListener, MouseMotionListener
     		byteIndicies[b] = b * 304128;
     	}
     	
-//   		VideoPreProcessor vpp = new VideoPreProcessor("vdos", byteIndicies);
-//   		vpp.fileTraverse();
-//    	fileNames = (vpp.getFileNames()).toArray(new String[0]);
+   		VideoPreProcessor vpp = new VideoPreProcessor("vdos", byteIndicies);
+   		vpp.fileTraverse();
+    	fileNames = (vpp.getFileNames()).toArray(new String[0]);
     	
     	// temp so i don't have to preprocess every fucking time I run this
-    	String[] temp = {"vdo3", "vdo4", "vdo6"}; 
-    	fileNames = temp;
+//    	String[] temp = {"vdo3", "vdo4", "vdo6"}; 
+//    	fileNames = temp;
    		
    		
    		VideoSearch ir = new VideoSearch(width, height, fileName, soundFileName);
@@ -101,9 +101,11 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    public static int[] audioFrames; // frames of matched audio
    
    public static File soundFile;
+   public static File soundFile2;
    public static FileInputStream sound;
    public static boolean dataLineFlushed;
    public static byte[] soundBytes;
+   public static byte[] soundBytes2;
    //public final int soundByteCount = 25518752;   
    public static int[] soundByteIndicies;
    public static InputStream waveStream;
@@ -111,6 +113,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    //private final int EXTERNAL_BUFFER_SIZE = 500000;
    public static SourceDataLine dataLine;
    public static AudioInputStream audioInputStream;
+   public static AudioInputStream audioInputStream2;
    public static boolean isAlreadyPlaying = false;
    Thread soundThread;
    Timer fps;
@@ -521,6 +524,9 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 						currFrame = audioFrames[curri];
 						bytes = searchBytes1;
 						currVid = search1;
+						soundBytes = soundBytes2;
+						audioInputStream = audioInputStream2;
+						soundFile = soundFile2;
 						img = refreshFrame(currFrame);
 						videoOriginal(img);	
 						showVideoStrip(currStrip, 352, 288);
@@ -751,9 +757,27 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		if (currVid.compareTo(search1) != 0) {
 			System.out.println("this is a different video");
 			File file = new File("vdos/" + search1 + "/" + search1 + ".rgb");
+			File soundFile2 = new File("vdos/" + search1 + "/" + search1 + ".wav");
 			InputStream fis = new FileInputStream(file);
 			long len = file.length();
 			searchBytes1 = new byte[(int) len];
+			
+			FileInputStream sis2 = new FileInputStream(soundFile2);
+		    
+
+		    long slen = soundFile2.length();
+
+		    soundBytes2 = new byte[(int) slen];
+		    
+		    System.out.println("file length:"+ len);
+			try {
+			    audioInputStream2 = AudioSystem.getAudioInputStream(soundFile2);
+			} catch (UnsupportedAudioFileException e1) {
+			    new PlayWaveException(e1);
+			} catch (IOException e1) {
+			    new PlayWaveException(e1);
+			}
+
 		    int offset = 0;
 	        int numRead = 0;
 	        while (offset < searchBytes1.length && (numRead=fis.read(searchBytes1, offset, searchBytes1.length-offset)) >= 0) {
