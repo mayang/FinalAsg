@@ -132,6 +132,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		    InputStream is = new FileInputStream(file);
 		    
 	    	soundFile = new File(soundFileName);
+	    	
 		    InputStream sis = new FileInputStream(soundFile);
 		    
 		    long len = file.length();
@@ -140,15 +141,16 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		    bytes = new byte[(int) len];
 		    soundBytes = new byte[(int) slen];
 		    
-//		    System.out.println("file length:"+ len);
+		    System.out.println("file length:"+ len);
 			audioInputStream = null;
 			try {
-			    audioInputStream = AudioSystem.getAudioInputStream(sis);
+			    audioInputStream = AudioSystem.getAudioInputStream(soundFile);
 			} catch (UnsupportedAudioFileException e1) {
 			    new PlayWaveException(e1);
 			} catch (IOException e1) {
 			    new PlayWaveException(e1);
 			}
+			System.out.println(audioInputStream == null);
 		    // is this a full path name?
 		    int slash = fileName.lastIndexOf("\\");
 		    int dot = fileName.indexOf(".");
@@ -689,6 +691,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		strip.setLayout(new BoxLayout(strip, BoxLayout.X_AXIS));
 		strip.setPreferredSize(new Dimension(w-20, 100));
 		JLabel label;
+		BufferedImage vid_frame;
 		int end = start + 6;
 		int loopcount = 0;
 		for (int i = start; i < end; ++i) {
@@ -700,9 +703,14 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 					i = 0;
 					end = 6 - loopcount;
 				}
+				
 				// Draw strip
-				BufferedImage vid_frame = renderFrame(frames[i], searchBytes1);
-				vid_frame = scaleImage(vid_frame, 352, 288, .2);
+				if (i >= frames.length || i < 0) {
+					vid_frame = blankFrame;
+				} else {
+					vid_frame = renderFrame(frames[i], searchBytes1);
+					vid_frame = scaleImage(vid_frame, 352, 288, .2);
+				}
 				label = new JLabel(new ImageIcon(vid_frame));
 				strip.add(label);
 				++loopcount;
@@ -1051,31 +1059,35 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	public class RefreshSound implements Runnable {
 		public void run() {
 			// Obtain the information about the AudioInputStream
-			
+				
 				InputStream sis = null;
 				try {
+				//	soundFile = new File("vdos/" + currVid + "/" + currVid + ".wav");
 					sis = new FileInputStream(soundFile);
 				} catch (FileNotFoundException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				
 				long slen = soundFile.length();
-		    
+				//System.out.println(sis);
 				soundBytes = new byte[(int) slen];
 		    
 //		   		 System.out.println("file length:"+ len);
-					audioInputStream = null;
-						try {
-			    audioInputStream = AudioSystem.getAudioInputStream(sis);
+				audioInputStream = null;
+				try {
+			    audioInputStream = AudioSystem.getAudioInputStream(soundFile);   
 					} catch (UnsupportedAudioFileException e1) {
 			    new PlayWaveException(e1);
+			   // System.out.println("fail1");
 					} catch (IOException e1) {
 			    new PlayWaveException(e1);
+			   // System.out.println("fail 2");
 			}
+						//System.out.println(audioInputStream);
 						AudioFormat audioFormat = audioInputStream.getFormat();
 						Info info = new Info(SourceDataLine.class, audioFormat);
-
+//						System.out.println(audioFormat == null);
+//						System.out.println(info == null);
 						// opens the audio channel
 						
 						dataLine = null;
