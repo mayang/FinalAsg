@@ -14,7 +14,9 @@ import java.awt.event.MouseMotionListener;
 import java.awt.image.*;
 import java.io.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.stream.*;
 import javax.xml.xpath.XPath;
@@ -53,13 +55,13 @@ public class VideoSearch implements MouseListener, MouseMotionListener
     		byteIndicies[b] = b * 304128;
     	}
     	
-   		VideoPreProcessor vpp = new VideoPreProcessor("vdos", byteIndicies);
-   		vpp.fileTraverse();
-    	fileNames = (vpp.getFileNames()).toArray(new String[0]);
+//   		VideoPreProcessor vpp = new VideoPreProcessor("vdos", byteIndicies);
+//   		vpp.fileTraverse();
+//    	fileNames = (vpp.getFileNames()).toArray(new String[0]);
     	
     	// temp so i don't have to preprocess every fucking time I run this
-//    	String[] temp = {"vdo3", "vdo4", "vdo6"}; 
-//    	fileNames = temp;
+    	String[] temp = {"vdo3", "vdo4", "vdo6"}; 
+    	fileNames = temp;
    		
    		
    		VideoSearch ir = new VideoSearch(width, height, fileName, soundFileName);
@@ -110,6 +112,7 @@ public class VideoSearch implements MouseListener, MouseMotionListener
    public static int[] soundByteIndicies;
    public static InputStream waveStream;
    private final int EXTERNAL_BUFFER_SIZE = 524288; // 128Kb
+   public final int SOUND_INDEX = 7357;
    //private final int EXTERNAL_BUFFER_SIZE = 500000;
    public static SourceDataLine dataLine;
    public static AudioInputStream audioInputStream;
@@ -397,6 +400,9 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 							currFrame = colorFrames[curri];
 							bytes = searchBytes1;
 							currVid = search1;
+							soundBytes = soundBytes2;
+							audioInputStream = audioInputStream2;
+							soundFile = soundFile2;
 							img = refreshFrame(currFrame);
 							videoOriginal(img);	
 							showVideoStrip(currStrip, 352, 288);
@@ -464,6 +470,9 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 						currFrame = motionFrames[curri];
 						bytes = searchBytes1;
 						currVid = search1;
+						soundBytes = soundBytes2;
+						audioInputStream = audioInputStream2;
+						soundFile = soundFile2;
 						img = refreshFrame(currFrame);
 						videoOriginal(img);	
 						showVideoStrip(currStrip, 352, 288);
@@ -740,24 +749,31 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 		InputSource is = new InputSource(new FileInputStream(currVid + ".xml"));
 		
 		// Query for the descriptors of this frame
-		String fno = Integer.toString(currFrame);
-		String queryColor = "/video/frame[@no=" + fno + "]/color";
-		color = xpath.evaluate(queryColor , is);
-		System.out.println(queryColor + " " + color);
-		is = new InputSource(new FileInputStream(currVid + ".xml"));
-		String queryMotion = "/video/frame[@no=" + fno + "]/motion";
-		motion = xpath.evaluate(queryMotion, is);
-		System.out.println(queryMotion + " " + motion);
-		is = new InputSource(new FileInputStream(currVid + ".xml"));
-		String queryAudio = "/video/frame[@no=" + fno + "]/audio";
-		audio = xpath.evaluate(queryAudio, is);
+//		String fno = Integer.toString(currFrame);
+//		String queryColor = "/video/frame[@no=" + fno + "]/color";
+//		color = xpath.evaluate(queryColor , is);
+//		System.out.println(queryColor + " " + color);
+//		is = new InputSource(new FileInputStream(currVid + ".xml"));
+//		String queryMotion = "/video/frame[@no=" + fno + "]/motion";
+//		motion = xpath.evaluate(queryMotion, is);
+//		System.out.println(queryMotion + " " + motion);
+//		is = new InputSource(new FileInputStream(currVid + ".xml"));
+//		String queryAudio = "/video/frame[@no=" + fno + "]/audio";
+//		audio = xpath.evaluate(queryAudio, is);
+		
+		color = extractColor(refreshFrame(currFrame));
+		System.out.println(color);
+		motion = extractMotion(refreshFrame(currFrame+5), refreshFrame(720-currFrame));
+		System.out.println(motion);
+		audio = extractAudio(currFrame);
+		System.out.println(audio);
 		
 		// read in search file vdos/vdo*/vdo*.rgb
 		// if this file isn't the file that's already in because that would be silly to reread it
 		if (currVid.compareTo(search1) != 0) {
 			System.out.println("this is a different video");
 			File file = new File("vdos/" + search1 + "/" + search1 + ".rgb");
-			File soundFile2 = new File("vdos/" + search1 + "/" + search1 + ".wav");
+			soundFile2 = new File("vdos/" + search1 + "/" + search1 + ".wav");
 			InputStream fis = new FileInputStream(file);
 			long len = file.length();
 			searchBytes1 = new byte[(int) len];
@@ -1182,4 +1198,215 @@ public class VideoSearch implements MouseListener, MouseMotionListener
 	    }
 
 	}
+	
+	// EXTRACTIONS
+	public String extractColor(BufferedImage frame) {
+		String color = "";
+		int redCount = 0, greenCount = 0, blueCount = 0;
+		Map<String, Integer> colorHistogram = new HashMap<String, Integer>(); 
+		for (int j = 0; j < frame.getHeight(); ++j) {
+			for (int i = 0; i < frame.getWidth(); i += 4) { // subsample
+				// get rgb value of this pixel
+				int rgb = frame.getRGB(i, j);
+				int r = (rgb & 0x00FF0000) >>> 16;
+				int g = (rgb & 0x0000FF00) >>> 8;
+				int b = (rgb & 0x000000FF);
+				// convert to hue
+				float hsb[] = null;
+				hsb = Color.RGBtoHSB(r, g, b, null);
+				//System.out.println(hsb[0]);
+				// stick it in hue histogram
+				// buckets [300-360, 0-60], [60-180], [180-300]
+				// this is red
+				if ((hsb[0] < 0.17) || (hsb[0] >= 0.83)) {
+					//System.out.println("red pixel");
+					colorHistogram.put("red", new Integer(++redCount));
+				// this is green
+				} else if (hsb[0] >= 0.17 && hsb[0] < 0.5) {
+					//System.out.println("green pixel");
+					colorHistogram.put("green", new Integer(++greenCount));
+				// this is blue
+				} else if (hsb[0] >= 0.5 && hsb[0] < 0.83) {
+					//System.out.println("blue Pixel");
+					colorHistogram.put("blue", new Integer(++blueCount));
+				}
+			}
+		}
+		// which color is dominant
+		//int max = colorHistogram.get("red");
+		//color = "red";
+		Map.Entry<String, Integer> dominantColor = null;
+		for (Map.Entry<String, Integer> e : colorHistogram.entrySet()) {
+			if (dominantColor == null || e.getValue().compareTo(dominantColor.getValue()) > 0) {
+				dominantColor = e;
+			}
+		}
+		color = dominantColor.getKey();
+		
+		return color;
+	}
+	
+
+	//returns a string with a direction and a velocity (upfast, downslow, leftmed, rightmed, etc.) using Template Matching
+	//Sum of Absolute Differences
+	private String extractMotion(BufferedImage templateFrame, BufferedImage futureFrame) {
+		String motion = "";
+		double minRedSAD = 999999999;
+		double minGreenSAD = 0;
+		double minBlueSAD = 0;
+		double SAD = 0.0;
+		double redSAD = 0.0;
+		double greenSAD = 0.0;
+		double blueSAD = 0.0;
+		int bestRedRow = 0;
+		int bestRedCol = 0;
+		int bestBlueRow = 0;
+		int bestBlueCol = 0;
+		int bestGreenRow = 0;
+		int bestGreenCol = 0;
+		double bestRedSAD = 0.0;
+		double bestBlueSAD = 0.0;
+		double bestGreenSAD = 0.0;
+		
+		// loop through the search image
+		for ( int y = 0; y < 288 - 96; y++ ) {
+		    for ( int x = 0; x < 352 - 88; x++ ) {
+		        redSAD = 0.0;
+		        greenSAD = 0.0;
+		        blueSAD = 0.0;
+		 
+		        // loop through the template image
+		        for ( int j = 0; j < 96; j++ ) {
+		            for ( int i = 0; i < 88; i++ ) {
+		            	
+		            	int color = futureFrame.getRGB(x+i, y+j);
+		            	int  red = (color & 0x00ff0000) >> 16;
+		            	//int  green = (color & 0x0000ff00) >> 8;
+		            	//int  blue = color & 0x000000ff;
+		            	
+		            	int templateColor = templateFrame.getRGB(i,j);
+		            	int  templateRed = (templateColor & 0x00ff0000) >> 16;
+		            	//int  templateGreen = (color & 0x0000ff00) >> 8;
+		            	//int  templateBlue = color & 0x000000ff;
+		            	
+		                //int pixel1 p_SearchIMG = futureFrame[x+i][y+j];
+		                //int pixel2 p_TemplateIMG = frame[i][j];
+		 
+		                redSAD += Math.abs( (double)red - (double)templateRed );
+		               
+		                //greenSAD += abs( (double)green - (double)templateGreen );
+		                //blueSAD += abs( (double)blue - (double)templateBlue );
+		            }
+		        }
+		        
+		        // save the best found position 
+		        //System.out.println(redSAD);
+		        if ( minRedSAD > redSAD ) { 
+		            minRedSAD = redSAD;
+		            // give me VALUE_MAX
+		            bestRedRow = x;
+		            bestRedCol = y;
+		            bestRedSAD = redSAD;
+		        }
+		        /*
+		        if ( minGreenSAD > greenSAD ) { 
+		            minGreenSAD = greenSAD;
+		            // give me VALUE_MAX
+		            bestGreenRow = x;
+		            bestGreenCol = y;
+		            bestGreenSAD = greenSAD;
+		        }
+		        if ( minBlueSAD > blueSAD ) { 
+		            minBlueSAD = blueSAD;
+		            // give me VALUE_MAX
+		            bestBlueRow = x;
+		            bestBlueCol = y;
+		            bestBlueSAD = blueSAD;
+		        }
+		        */
+		        
+		    }
+		}
+		
+		System.out.println(bestRedRow);
+		System.out.println(bestRedCol);
+		
+		//compute only red (gray) intensity for now
+		
+		if (bestRedRow<144-96 && bestRedCol <176-88){
+			motion = "UpLeft";
+			System.out.println(motion);
+		}
+		else if (bestRedRow>144-96 && bestRedCol <176-88){
+			motion = "DownLeft";
+			System.out.println(motion);
+		}
+		else if (bestRedRow<144-96 && bestRedCol >176-88){
+			motion = "UpRight";
+			System.out.println(motion);
+		}
+		else if (bestRedRow>144-96 && bestRedCol >176-88){
+			motion = "DownRight";
+			System.out.println(motion);
+		}
+		
+		return motion;
+	}
+	
+	//Returns a number 0-100
+	private String extractAudio(int frameNo) {
+		String audio = "";
+		int sound = 0;
+		int count = 0;
+		/*
+		try {
+			audioInputStream.skip((long) (frameNo*SOUND_INDEX));
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		try {
+		    if (readBytes != -1) {
+			readBytes = audioInputStream.read(audioBuffer, (frameNo*SOUND_INDEX),
+				audioBuffer.length);
+			audio = calculateRMSLevel(audioBuffer);
+		    }
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/
+		
+		int readBytes = 0;
+		byte[] audioBuffer = new byte[EXTERNAL_BUFFER_SIZE];
+		audioInputStream = null;
+		try {
+		    audioInputStream = AudioSystem.getAudioInputStream(soundFile);
+		} catch (UnsupportedAudioFileException e1) {
+		    new PlayWaveException(e1);
+		} catch (IOException e1) {
+		    new PlayWaveException(e1);
+		}
+		
+		
+		try {
+		    if (readBytes != -1) {
+		    
+			readBytes = audioInputStream.read(audioBuffer, 0,
+				audioBuffer.length);
+			//System.out.println(readBytes);
+			
+				if (readBytes >= 0){
+			 
+				//System.out.println("hi");
+				//int level = 0;
+				sound = calculateRMSLevel(audioBuffer);
+				System.out.println(sound);
+				System.out.println(count++);
+				}
+		    }
+		}catch (IOException e){ e.printStackTrace();}
+		return ""+sound;
+	}
+	
 }
